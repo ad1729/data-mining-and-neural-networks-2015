@@ -136,7 +136,7 @@ net = patternnet(neurons);
 net.divideParam.trainRatio = 70/100;
 net.divideParam.valRatio = 15/100;
 net.divideParam.testRatio = 15/100;
-net.trainFcn = 'trainrp'; % 'trainscg', 'trainlm', 'trainbfg', 'trainrp', 'traingd'
+net.trainFcn = 'trainlm'; % 'trainscg', 'trainlm', 'trainbfg', 'trainrp', 'traingd'
 net.performParam.regularization = 1e-6;
 
 [net, tr] = train(net, inputs, target);
@@ -160,18 +160,5 @@ fprintf('Percentage Correct Classification   : %f%%\n', 100*(1-c));
 fprintf('Percentage Incorrect Classification : %f%%\n', 100*c);
 
 plotroc(testT, testY) % ROC for the test set
-
-%% 
-
-figure
-
-subplot(1,3,1)
-plotperform(tr);
-
-subplot(1,3,2)
-plotroc(tr);
-
-subplot(1,3,3)
-plotconfusion(tr);
 
 
