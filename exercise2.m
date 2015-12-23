@@ -73,8 +73,6 @@ legend('Test Set', 'Approximated Function');
 
 print('\home\ad\Desktop\images\santafe_pred', '-dpng');
 
-
-
 %% 2.2 alphabet recognition (playing with the demo file inlcuded)
 %appcr1 % using neural network for alphabet recognition
 % We can make this more fun by taking the code from the help file for the
@@ -124,9 +122,9 @@ ylabel('Errors');
 legend('Network 1','Network 2','Location','NorthWest')
 
 %% 2.3 Classification Problem (Pima Indian Diabetes)
-
-inputs = Xnorm';
-target = hardlim(Y)';
+load('/home/ad/Desktop/KUL Course Material/Data Mining And Neural Networks/Final exam/pidstart.mat', '-mat')
+[inputs, std_input] = mapstd(Xnorm'); % normalizing the input variables
+target = hardlim(Y)'; % converting from [-1,1] to [0,1]
 
 neurons = 15;
 
@@ -152,6 +150,7 @@ testY = net(testX);
 testClass = testY > 0.5;
 
 plotconfusion(testT, testY); % confusion matrix for the test set
+print('\home\ad\Desktop\images\pima_confusion', '-dpng');
 
 % overall percentage of (in)correct classification on the test set
 [c,cm] = confusion(testT,testY)
@@ -160,5 +159,4 @@ fprintf('Percentage Correct Classification   : %f%%\n', 100*(1-c));
 fprintf('Percentage Incorrect Classification : %f%%\n', 100*c);
 
 plotroc(testT, testY) % ROC for the test set
-
-
+print('\home\ad\Desktop\images\pima_roc', '-dpng');

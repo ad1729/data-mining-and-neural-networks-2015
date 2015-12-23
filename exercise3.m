@@ -32,7 +32,7 @@ net.divideFcn = 'divideind';
 net.divideParam = struct('trainInd', Train_ix, ...
 'valInd', Val_ix, ...
 'testInd', Test_ix);
-[net, tr] = train(net, pn, tn); %pn - original data; pp - reduced data
+[net, tr] = train(net, pn, tn); % pn - original data; pp - reduced data
 
 %% Get predictions on training and test
 Yhat_train = net(pn(:, Train_ix));
@@ -49,18 +49,18 @@ perf_test = perform(net, tn(:, Test_ix), Yhat_test);
 clear % clear workspace
 clc % clear console
 
-%% run demo demard
+%% (a) run demo demard
 demard
 
-%% run demo demev1
+%% (b) run demo demev1
 demev1
 
-%% UCI ionosphere data classification using MLP and ARD
+%% (c) UCI ionosphere data classification using MLP and ARD
 % code in this section is taken from demard.m with appropriate
 % modifications where necessary
 load('/home/ad/Desktop/KUL Course Material/Data Mining And Neural Networks/Final exam/ionstart.mat', '-mat')
-inputs = Xnorm;
-targets = hardlim(Y);
+[inputs, std_input] = mapstd(Xnorm); % normalizing the input variables
+targets = hardlim(Y); % converting from [-1,1] to [0,1] thus no need to find beta
 
 train_ind =[1:6:351 2:6:351 4:6:351 5:6:351]; % 67% of the data used as training
 test_ind =[3:6:351 6:6:351]; % 33% of the data used as a test set
@@ -95,11 +95,19 @@ for k = 1:nouter
 end
 
 %% Selecting Parameters
+clc;
 i = 1:nin;
 val = net.alpha(1:nin,:);
 fprintf(1, '  alpha%i =  %8.5f\n', [i; val']);
 fprintf(1, '  beta  =  %8.5f\n', net.beta);
 fprintf(1, '  gamma =  %8.5f\n\n', gamma);
+
+%% Display the weights for each of the inputs
+%weight_table = table(index, net.w1(:,1)', net.w1(:,2)');
+disp('This is confirmed by looking at the corresponding weight values:')
+disp(' ');
+fprintf(1, '    x%i:    %8.5f    %8.5f\n', [i; net.w1']);
+disp(' ');
 
 %% Predictions from the model and comparing with the test set
 [pred, z] = mlpfwd(net, inputs(test_ind, :));
@@ -111,6 +119,7 @@ fprintf(1, '  gamma =  %8.5f\n\n', gamma);
 plotconfusion(targets(test_ind,:)', pred');
 print('\home\ad\Desktop\images\ion_pred_full_confusion', '-dpng');
 
+%% 
 %subplot(1,2,2)
 plotroc(targets(test_ind,:)', pred');
 print('\home\ad\Desktop\images\ion_pred_full_roc', '-dpng');
