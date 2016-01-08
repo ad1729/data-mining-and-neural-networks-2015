@@ -1,4 +1,6 @@
 %% 2.1 Santa Fe time series prediction
+clear;
+clc;
 
 % reading in the training set
 fid = fopen('/home/ad/Desktop/KUL Course Material/Data Mining And Neural Networks/MATLAB/Exercises/lasertrain.dat','r');
@@ -30,133 +32,127 @@ title('Test Set');
 
 print('\home\ad\Desktop\images\santafe', '-dpng');
 
-%% Training a network
-lags = 100; % 50 72 84
-neurons = 20; % 10
-train_alg = 'trainscg'; %trainscg, trainrp, trainbfg
-
-train_data = tonndata(santafe, false, false);
-test_data = tonndata(santafe_pred, false, false);
-
-% setting up the training and validation sets
-% net.divideFcn = 'divideind';
-% net.divideParam = struct('trainInd', x_train, 'valInd', x_val , ...
-% 'testInd', []);
-
-% fitting the model
-net = narnet(1:lags, neurons, 'closed',  train_alg); %'open' 'closed'
-
-net.performParam.regularization = 0.000001;
-net.trainParam.epochs = 2000;
-net.performFcn = 'mae';  % 'mse', 'mae' use help nnperformance
-
-[Xs,Xi,Ai,Ts] = preparets(net,{},{},train_data);
-net = train(net,Xs,Ts,Xi,Ai);
-%view(net)
-y = net(Xs, Xi, Ai);
-
-% calculating y_hat
-Y_hat = nan(100+lags, 1); % creating an empty row vector
-Y_hat = tonndata(Y_hat, false, false);
-Y_hat(1:lags) = train_data((end-(lags-1)):end);
-[xc, xic, aic, tc] = preparets(net, {}, {}, Y_hat);
-Y_hat = fromnndata(net(xc, xic, aic), true, false, false);
-
 figure;
-plot(santafe_pred, 'r-');
+subplot(2,1,1, 'align')
+autocorr(mapminmax(santafe), 500) %acf
+subplot(2,1,2, 'align')
+parcorr(mapminmax(santafe), 500) %pacf
+print('\home\ad\Desktop\images\santafe_acf', '-dpng');
+
+%% Setting up the network
+lags = 80; % 16, 25, 40, 60
+%neurons = round(lags/2); % rule of thumb
+neurons = 30;
+train_alg = 'trainscg'; % trainscg, trainbfg, trainlm, trainbr
+
+% converting into a form which can be used by the narnet function
+train_data = con2seq(santafe');
+test_data = con2seq(santafe_pred');
+
+% fitting the model, model to be trained in feedforward mode
+net = narnet(1:lags, neurons, 'open', train_alg); %'open' (default)- feedforward 'closed'- recurrent
+
+net.performParam.regularization = 1e-6;
+net.trainParam.epochs = 1000; % 2000
+net.performFcn = 'mse';  % 'mse', 'mae'; info: use help nnperformance
+
+net.divideFcn = 'divideblock'; % not splitting the data into train/validation because time series
+% but using narnet has net.divideMode = 'time' so it's cool?
+% setting up the training and validation sets
+
+%[trainInd,valInd] = divideint(1000, 0.8, 0.2);
+% splitting the set into 70% for training and 30% for validation
+% trainInd = [1:70, 101:170, 201:270, 301:370, 401:470, 501:570, 601:670, 701:770, 801:870, 901:970];
+% valInd = [71:100, 171:200, 271:300, 371:400, 471:500, 571:600, 671:700, 771:800, 871:900, 971:1000];
+% net.divideFcn = 'divideind';
+% net.divideParam = struct('trainInd', trainInd, 'valInd', valInd, 'testInd', []);
+net.divideParam.trainRatio = 70/100;
+net.divideParam.valRatio = 30/100;
+net.divideParam.testRatio = 0/100;
+
+%% Training the network
+[Xs,Xi,Ai,Ts] = preparets(net,{},{},train_data); 
+[net, tr] = train(net,Xs,Ts,Xi,Ai);
+
+Y = net(Xs,Xi,Ai); 
+perf = perform(net,Ts,Y)
+
+train_errors = cell2mat(gsubtract(Ts,Y));
+
+% closing the loop and doing 100 multi-step ahead predictions
+netc = closeloop(net);
+netc.name = [net.name ' - Closed Loop'];
+Y_hat = [train_data((1000-lags+1):1000) num2cell(nan(100,1)')];
+
+[xc,xic,aic,tc] = preparets(netc,{},{},Y_hat);
+Y_hat = netc(xc,xic,aic);
+
+% calculating the residuals and the MAE
+test_residuals = gsubtract(test_data,Y_hat);
+mae = 0.01 * sum(abs(cell2mat(test_residuals))) % 0.01 = 1/100; formula uses 1/N
+
+%% Saving the predicted function
+figure;
+
+% subplot(1,3,1, 'align')
+% autocorr(train_errors, 100) %acf
+% 
+% subplot(1,3,2, 'align')
+% parcorr(train_errors, 100) %pacf
+% 
+% subplot(1,3,3, 'align')
+plot(santafe_pred, '-+');
 hold on;
-plot(Y_hat, 'g-');
+plot(cell2mat(Y_hat), 'r-*');
 hold off;
 xlabel('Index');
 title('Santa Fe Laser Prediction');
 legend('Test Set', 'Approximated Function');
 
-print('\home\ad\Desktop\images\santafe_pred', '-dpng');
+%print('\home\ad\Desktop\images\santafe_pred60', '-dpng');
+%print('\home\ad\Desktop\images\manual_lag60', '-dpng');
 
 %% 2.2 alphabet recognition (playing with the demo file inlcuded)
-%appcr1 % using neural network for alphabet recognition
-% We can make this more fun by taking the code from the help file for the
-% demo and playing around with the neural network model
-
-%% Noiseless case
-[X,T] = prprob;
-plotchar(X(:,4)); % number corresponds to the alphabet so 1-A, 4-D, etc
-
-% feedforward neural network set up for pattern recognition with 25 hidden neurons
-net1 = feedforwardnet(25);
-view(net1)
-
-net1.divideFcn = '';
-net1 = train(net1,X,T,nnMATLAB);
-
-%% Noisy case
-numNoise = 30;
-Xn = min(max(repmat(X,1,numNoise)+randn(35,26*numNoise)*0.2,0),1);
-Tn = repmat(T,1,numNoise);
-
-figure
-plotchar(Xn(:,4)) % number corresponds to the alphabet so 1-A, 4-D, etc
-
-net2 = feedforwardnet(25);
-net2 = train(net2,Xn,Tn,nnMATLAB);
-
-%% testing both networks
-noiseLevels = 0:.05:1;
-numLevels = length(noiseLevels);
-percError1 = zeros(1,numLevels);
-percError2 = zeros(1,numLevels);
-
-for i = 1:numLevels
-  Xtest = min(max(repmat(X,1,numNoise)+randn(35,26*numNoise)*noiseLevels(i),0),1);
-  Y1 = net1(Xtest);
-  percError1(i) = sum(sum(abs(Tn-compet(Y1))))/(26*numNoise*2);
-  Y2 = net2(Xtest);
-  percError2(i) = sum(sum(abs(Tn-compet(Y2))))/(26*numNoise*2);
-end
-
-figure
-plot(noiseLevels,percError1*100,'--',noiseLevels,percError2*100);
-title('Percentage of Recognition Errors');
-xlabel('Noise Level');
-ylabel('Errors');
-legend('Network 1','Network 2','Location','NorthWest')
+% appcr1 % using neural network for alphabet recognition
 
 %% 2.3 Classification Problem (Pima Indian Diabetes)
+clear;
+clc;
+
 load('/home/ad/Desktop/KUL Course Material/Data Mining And Neural Networks/Final exam/pidstart.mat', '-mat')
+
+%% Training the network
 [inputs, std_input] = mapstd(Xnorm'); % normalizing the input variables
 target = hardlim(Y)'; % converting from [-1,1] to [0,1]
 
-neurons = 15;
+neurons = 10; % 2, 5, 8, 10 (check ROC print statement below as well!)
 
 net = patternnet(neurons);
 
 % divide the data into training, validation and test sets
-net.divideParam.trainRatio = 70/100;
-net.divideParam.valRatio = 15/100;
-net.divideParam.testRatio = 15/100;
-net.trainFcn = 'trainlm'; % 'trainscg', 'trainlm', 'trainbfg', 'trainrp', 'traingd'
-net.performParam.regularization = 1e-6;
+net.divideParam.trainRatio = 60/100;
+net.divideParam.valRatio = 20/100;
+net.divideParam.testRatio = 20/100;
 
 [net, tr] = train(net, inputs, target);
+perf = tr.best_vperf
 %view(net)
 
-plotperform(tr);
-
-% evaluating the network on the test set
-testX = inputs(:,tr.testInd);
+%% evaluating the network on the test set
+testX = inputs(:, tr.testInd);
 testT = target(:, tr.testInd);
 
 testY = net(testX);
 testClass = testY > 0.5;
 
-plotconfusion(testT, testY); % confusion matrix for the test set
-print('\home\ad\Desktop\images\pima_confusion', '-dpng');
+plotroc(testT, testY) % ROC for the test set
+print('\home\ad\Desktop\images\pima_roc_10', '-dpng');
+
+plotconfusion(testT, testY) % confusion matrix for the test set
+print('\home\ad\Desktop\images\pima_confusion_10', '-dpng');
 
 % overall percentage of (in)correct classification on the test set
 [c,cm] = confusion(testT,testY)
 
 fprintf('Percentage Correct Classification   : %f%%\n', 100*(1-c));
 fprintf('Percentage Incorrect Classification : %f%%\n', 100*c);
-
-plotroc(testT, testY) % ROC for the test set
-print('\home\ad\Desktop\images\pima_roc', '-dpng');
