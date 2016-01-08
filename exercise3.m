@@ -47,7 +47,7 @@ perf_test = perform(net, tn(:, Test_ix), Yhat_test);
 %% 3.2 Automatic Relevance Detection
 % In order to apply ARD, download the Netlab software from
 % http://www.ncrg.aston.ac.uk/netlab/ or use the following link to
-% get to the download’s page directly: http://cl.ly/Rw0P
+% get to the download's page directly: http://cl.ly/Rw0P
 
 clear; % clear workspace
 clc; % clear console
