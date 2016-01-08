@@ -1,7 +1,17 @@
-%% role of the hidden layer and the output layer
+%% (1.1) Function Approximation (noiseless case)
+clear;
+clc;
+
+nnd11gn
+
+
+%% (1.2) Role of the hidden layer and the output layer
+clear;
+clc;
+
 x = linspace(0,1,21);
 y = sin(0.7 * pi * x);
-plot(x, y, 'b-');
+plot(x, y, 'b-*');
 title('y = sin(0.7\pix) with x in [0,1]');
 print('\home\ad\Desktop\images\sinpix', '-dpng');
 
