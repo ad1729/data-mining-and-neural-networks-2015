@@ -40,9 +40,9 @@ parcorr(mapminmax(santafe), 500) %pacf
 print('\home\ad\Desktop\images\santafe_acf', '-dpng');
 
 %% Setting up the network
-lags = 80; % 16, 25, 40, 60
+lags = 20; % 16, 25, 40, 60
 %neurons = round(lags/2); % rule of thumb
-neurons = 30;
+neurons = 2*lags;
 train_alg = 'trainscg'; % trainscg, trainbfg, trainlm, trainbr
 
 % converting into a form which can be used by the narnet function
@@ -52,11 +52,11 @@ test_data = con2seq(santafe_pred');
 % fitting the model, model to be trained in feedforward mode
 net = narnet(1:lags, neurons, 'open', train_alg); %'open' (default)- feedforward 'closed'- recurrent
 
-net.performParam.regularization = 1e-6;
+net.performParam.regularization = 1e-7;
 net.trainParam.epochs = 1000; % 2000
 net.performFcn = 'mse';  % 'mse', 'mae'; info: use help nnperformance
 
-net.divideFcn = 'divideblock'; % not splitting the data into train/validation because time series
+%net.divideFcn = 'divideblock'; % not splitting the data into train/validation because time series
 % but using narnet has net.divideMode = 'time' so it's cool?
 % setting up the training and validation sets
 
@@ -91,7 +91,7 @@ Y_hat = netc(xc,xic,aic);
 test_residuals = gsubtract(test_data,Y_hat);
 mae = 0.01 * sum(abs(cell2mat(test_residuals))) % 0.01 = 1/100; formula uses 1/N
 
-%% Saving the predicted function
+% Saving the predicted function
 figure;
 
 % subplot(1,3,1, 'align')
