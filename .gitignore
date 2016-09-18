@@ -1,1 +1,7 @@
 *.m~
+*.aux
+*.log
+*.out
+*.toc
+*.tex.bak
+*.gz
